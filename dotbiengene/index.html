@@ -1,1 +1,1173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Phòng thí nghiệm di truyền – Quan sát cấu trúc DNA, đặt giả thuyết, phiên mã & dịch mã, phân tích hậu quả đột biến." />
+  <title>Phòng thí nghiệm di truyền – Đột biến Gene</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.400.0"></script>
+  <style>
+    body { font-family: 'Be Vietnam Pro', system-ui, sans-serif; background: #f8fafc; color: #0f172a; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+    .fade-in { animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .progress-bar { transition: width 0.4s ease; }
+    textarea, input, select { font-family: inherit; }
+    .base-match { background: #dcfce7; color: #166534; }
+    .base-mismatch { background: #fee2e2; color: #991b1b; }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,.03); border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59,130,246,.25); border-radius: 10px; }
+  </style>
+</head>
+<body class="bg-slate-50">
+  <div id="root"></div>
 
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // ========== ICONS ==========
+    const Icon = ({ name, className = "w-4 h-4" }) => {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (window.lucide && ref.current) {
+          ref.current.innerHTML = "";
+          const el = document.createElement("i");
+          el.setAttribute("data-lucide", name);
+          el.className = className;
+          ref.current.appendChild(el);
+          window.lucide.createIcons({ attrs: { class: className }, nameAttr: "data-lucide" });
+        }
+      }, [name, className]);
+      return <span ref={ref} className={`inline-flex items-center justify-center ${className}`} />;
+    };
+
+    // ========== TRANSLATIONS ==========
+    const TRANSLATIONS = {
+      vi: {
+        brand: "Khoa học Tự nhiên 9",
+        appTitle: "Phòng thí nghiệm di truyền",
+        thinkingScore: "Điểm tư duy",
+        // Pre-interface
+        welcomeTitle: "Phòng thí nghiệm di truyền",
+        welcomeSubtitle: "Quan sát giải trình tự DNA của bệnh nhân & người bình thường → Đặt giả thuyết → Viết trình tự mRNA & Protein → Phân tích hậu quả",
+        welcomeDesc: "Ứng dụng mô phỏng đột biến gene giúp học sinh lớp 9 rèn luyện kỹ năng quan sát, đặt giả thuyết khoa học, ôn tập quá trình phiên mã, dịch mã và giải thích cơ chế gây bệnh.",
+        welcomeFeature1: "8 ca bệnh mô hình (Sickle cell, CF, Huntington…)",
+        welcomeFeature2: "Giả thuyết trước khi làm thực hành",
+        welcomeFeature3: "Phản hồi trực quan khi gõ mRNA",
+        welcomeFeature4: "Phản tư phương pháp sau khi hoàn thành",
+        welcomeNote: "Lưu ý: Các chuỗi DNA là mô hình giáo dục, không phải trình tự thật của bệnh nhân.",
+        startApp: "Bắt đầu thực hành",
+        // Phases
+        phase1: "Chọn tình huống lâm sàng",
+        phase2: "Quan sát & Đặt giả thuyết",
+        phase3: "Phiên mã & Dịch mã",
+        phase4: "Phân tích & Thảo luận",
+        phase5: "Phản tư",
+        // Phase 1
+        p1Title: "Chọn tình huống lâm sàng",
+        p1Intro: "Mỗi mô phỏng tình huống lâm sàng dưới đây dưới đây là một mô hình đơn giản hóa của đột biến gene gây bệnh. Trình tự DNA được rút ngắn để học sinh tập trung vào cơ chế đột biến cấu trúc gene thay vì ghi nhớ chuỗi thật.",
+        p1Disclaimer: "Lưu ý quan trọng: Các chuỗi DNA trong ứng dụng là mô hình giáo dục, không phải trình tự thật của bệnh nhân. Mục tiêu là luyện kỹ năng quan sát, giả thuyết và suy luận.",
+        p1Start: "Bắt đầu với tình huống này",
+        // Phase 2
+        p2Title: "Quan sát DNA & Đặt giả thuyết",
+        p2Observe: "Hãy quan sát kỹ sự khác biệt giữa trình tự DNA mạch khuôn (có chiều 3' → 5') của người bình thường và bệnh nhân.",
+        p2Normal: "GENE BÌNH THƯỜNG (mạch khuôn 3'→5')",
+        p2Mutant: "GENE BỆNH (mạch khuôn 3'→5')",
+        p2HypTitle: "Bước 1: Giả thuyết khoa học",
+        p2HypQ1: "Bạn dự đoán đây là loại đột biến nào trong ba loại: thay thế, mất đoạn hoặc thêm đoạn?. Vì sao?",
+        p2HypQ2: "Bạn dự đoán cấu trúc và chức năng của protein sẽ bị ảnh hưởng như thế nào?",
+        p2HypPlaceholder1: "Ví dụ: DNA bệnh nhân ngắn hơn 3 nucleotide → có thể là mất đoạn …",
+        p2HypPlaceholder2: "Ví dụ: Protein có thể mất 1 amino acid…",
+        p2Confirm: "Xác nhận giả thuyết & Tiếp tục",
+        p2NeedBoth: "Vui lòng viết cả hai phần giả thuyết trước khi tiếp tục.",
+        // Phase 3
+        p3Title: "Phiên mã (tạo ra mRNA) & Dịch mã (tạo ra protein)",
+        p3KeyTitle: "Nhắc nhanh khái niệm",
+        p3Key1: "Mạch khuôn 3'→5' → mRNA được tổng hợp 5'→3' theo quy tắc A↔U, T↔A, G↔C, C↔G.",
+        p3Key2: "mRNA được đọc theo bộ ba mã hóa từ 5'→3'. AUG = Met (Bắt đầu), UAA/UAG/UGA = Kết thúc.",
+        p3Key3: "Đột biến thay thế 1 base → có thể thay 1 amino acid, tạo bộ ba kết thúc sớm hoặc im lặng.",
+        p3Key4: "Mất/thêm số base không chia hết cho 3 → dịch khung đọc, thường tạo protein hoàn toàn khác hoặc dừng sớm.",
+        p3NormalDna: "DNA mạch khuôn bình thường (3'→5')",
+         p3MutantDna: "DNA mạch khuôn bệnh (3'→5')",
+         p3NormalMrna: "mRNA bình thường (5'→3')",
+        p3MutantMrna: "mRNA bệnh (5'→3')",
+        p3NormalProt: "Protein bình thường",
+        p3MutantProt: "Protein bệnh",
+        p3PlaceholderMrna: "Nhập trình tự mRNA (chỉ nhập A, U, G, C)…",
+        p3PlaceholderProt: "Nhập các amino acid cách nhau bằng dấu phẩy hoặc khoảng trắng (VD: Val, His, Leu…)",
+        p3Check: "Kiểm tra đáp án",
+        p3Hide: "Ẩn kết quả",
+        p3HideKey: "Ẩn",
+        p3Correct: "Chính xác",
+        p3Incorrect: "Chưa chính xác",
+        p3ShowCorrect: "Xem đáp án đúng",
+        p3Attempts: "Số lần thử",
+        p3AaTitle: "Phân tích cấu trúc và chức năng của protein",
+        p3AaHint: "Ghi nhận amino acid nào thay đổi (nếu có). Ngay cả khi protein chưa đúng hoàn toàn, em vẫn có thể ghi chú.",
+        p3AaPlaceholder: "Ví dụ: protein mất đi 1 amnino acid Glu…",
+        // Phase 4
+        p4Title: "Thảo luận & Phân tích",
+        p4Q1: "1. Đây là loại đột biến cấu trúc gene nào? Giải thích cách em xác định dựa trên sự khác biệt giữa hai chuỗi DNA.",
+        p4H1: "So sánh chiều dài và từng vị trí nucleotide giữa DNA bình thường và DNA bệnh nhân.",
+        p4Q2: "2. So sánh chuỗi protein trước và sau đột biến. Đột biến này gây hậu quả gì đối với protein?",
+        p4H2: "So sánh từng amino acid và nhận xét sự thay đổi về cấu trúc.",
+        p4Q3: "3. Giải thích cơ chế gây bệnh: Tại sao sự thay đổi protein dẫn đến triệu chứng của bệnh nhân?",
+        p4H3: "Liên hệ cấu trúc protein → chức năng → hậu quả sinh lý/lâm sàng.",
+        p4Q4: "4. Nếu đột biến xảy ra ở vị trí khác trong cùng gene, hậu quả có thể khác như thế nào? Đưa ra 1 giả thuyết.",
+        p4H4: "Suy nghĩ về vị trí quan trọng của protein.",
+        // Phase 5
+        p5Title: "Phản tư",
+        p5Complete: "Hoàn thành",
+        p5SummaryTitle: "Tóm tắt quá trình",
+        p5Case: "Tình huống",
+        p5Hypothesis: "Giả thuyết ban đầu",
+        p5Mrna: "mRNA đã nhập",
+        p5Protein: "Protein đã nhập",
+                p5ReflectTitle: "Phản tư",
+        p5ReflectHint: "Mô hình này giúp em hiểu điều gì về đột biến gene? Điều gì mô hình chưa thể hiện được so với thực tế lâm sàng?",
+        p5ReflectPlaceholder: "Viết 3–5 câu…",
+        p5ReflectSample: "Mô hình giúp em thấy rõ cách một thay đổi nhỏ trên DNA có thể làm thay đổi protein và dẫn đến bệnh. Tuy nhiên chuỗi DNA thật dài hơn rất nhiều, và nhiều đột biến không gây bệnh. Trong thực tế cần kết hợp nhiều bằng chứng (lâm sàng, enzyme, protein…) chứ không chỉ nhìn một đoạn DNA ngắn.",
+        reset: "Làm lại từ đầu",
+        resetConfirm: "Xóa toàn bộ tiến độ và làm lại từ đầu?",
+        home: "Về trang chọn tình huống lâm sàng",
+        homeConfirm: "Về trang chọn tình huống lâm sàng sẽ xóa câu trả lời hiện tại. Tiếp tục?",
+        footer: "Khoa học Tự nhiên 9 · Phòng thí nghiệm di truyền",
+        chars: "ký tự",
+        showSample: "Xem đáp án tham khảo",
+        hideSample: "Ẩn đáp án tham khảo",
+        sampleAnswer: "Đáp án tham khảo (mẫu)",
+        lockNote: "Ghi chú: Hãy viết xong câu trả lời trước, rồi mới nhấn «Xem đáp án tham khảo». Sau khi nhấn, ô trả lời sẽ bị khóa để em đối chiếu với mẫu.",
+        lockedHint: "Ô trả lời đã khóa sau khi xem đáp án tham khảo.",
+        back: "Quay lại",
+        next: "Tiếp tục",
+        codonTable: "Bảng mã di truyền",
+        hideCodon: "Ẩn bảng mã",
+        correctDnaNote: "Chuỗi DNA bệnh nhân (đã áp dụng đột biến mô hình)",
+      },
+      en: {
+        brand: "Natural Science 9 · Scientific Thinking",
+        appTitle: "Genetic Mutation Lab",
+        thinkingScore: "Thinking score",
+        welcomeTitle: "Genetic Mutation Lab",
+        welcomeSubtitle: "Observe patient DNA & normal DNA → Form hypothesis → Write mRNA & Protein → Analyse consequences",
+        welcomeDesc: "A gene-mutation simulation that helps Grade 9 students practise observation, scientific hypothesis, transcription, translation and explaining disease mechanisms.",
+        welcomeFeature1: "8 model disease cases (Sickle cell, CF, Huntington…)",
+        welcomeFeature2: "Hypothesis before practical work",
+        welcomeFeature3: "Live visual feedback while typing mRNA",
+        welcomeFeature4: "Method reflection after completion",
+        welcomeNote: "DNA sequences are educational models, not real patient sequences.",
+        startApp: "Start practice",
+        phase1: "Select case",
+        phase2: "Observe & Hypothesis",
+        phase3: "Transcribe & Translate",
+        phase4: "Analysis & Discussion",
+        phase5: "Reflection",
+        p1Title: "Choose a clinical scenario",
+        p1Intro: "Each case below is a simplified model of a disease-causing gene mutation. DNA sequences are shortened so students can focus on the mechanism (substitution / deletion / insertion) rather than memorising real sequences.",
+        p1Disclaimer: "Important note: The DNA sequences in this app are educational models, not real patient sequences. The goal is to practise observation, hypothesis formation and reasoning.",
+        p1Start: "Start with this case",
+        p2Title: "Observe DNA & Form a hypothesis",
+        p2Observe: "Carefully observe the difference between normal DNA and the patient’s DNA. DNA is shown as the template strand in the 3' → 5' direction.",
+        p2Normal: "NORMAL GENE (template 3'→5')",
+        p2Mutant: "PATIENT’S GENE (template 3'→5')",
+        p2HypTitle: "Step 1: Scientific hypothesis",
+        p2HypQ1: "Which of the three types of mutation do you predict: substitution, deletion, or insertion? Why?",
+        p2HypQ2: "How do you predict the structure and function of the protein will be affected?",
+        p2HypPlaceholder1: "e.g. Patient DNA is 3 nucleotides shorter → it may be a deletion…",
+        p2HypPlaceholder2: "e.g. The protein may lose one amino acid…",
+        p2Confirm: "Confirm hypothesis & Continue",
+        p2NeedBoth: "Please write both parts of the hypothesis before continuing.",
+        p3Title: "Transcription (mRNA) & Translation (Protein)",
+        p3KeyTitle: "Quick concept reminder",
+        p3Key1: "Template strand 3'→5' → mRNA is synthesised 5'→3' following A↔U, T↔A, G↔C, C↔G.",
+        p3Key2: "mRNA is read in triplets (codons) 5'→3'. AUG = Met (Start), UAA/UAG/UGA = STOP.",
+        p3Key3: "Single-base substitution → may change 1 aa (missense), create early stop (nonsense) or be silent.",
+        p3Key4: "Deletion/insertion of bases not divisible by 3 → frameshift, usually producing a completely different or truncated protein.",
+        p3NormalDna: "Normal template DNA (3'→5')",
+         p3MutantDna: "Patient template DNA (3'→5')",
+         p3NormalMrna: "Normal mRNA (5'→3')",
+        p3MutantMrna: "Patient mRNA (5'→3')",
+        p3NormalProt: "Normal Protein",
+        p3MutantProt: "Patient Protein",
+        p3PlaceholderMrna: "Enter mRNA sequence (A, U, G, C only)…",
+        p3PlaceholderProt: "Enter amino acids separated by commas or spaces (e.g. Val, His, Leu…)",
+        p3Check: "Check answers",
+        p3Hide: "Hide results",
+        p3HideKey: "Hide",
+        p3Correct: "Correct",
+        p3Incorrect: "Incorrect",
+        p3ShowCorrect: "Show correct answer",
+        p3Attempts: "Attempts",
+        p3AaTitle: "Protein structure and function analysis",
+        p3AaHint: "Record which amino acid changes (if any). You can add your note even if the protein sequence is not completely correct yet.",
+        p3AaPlaceholder: "e.g. The protein loses one amino acid, Glu…",
+        p4Title: "Discussion & Analysis",
+        p4Q1: "1. What type of gene structural mutation is this? (Substitution / Deletion / Insertion). Explain how you identified it from the difference between the two DNA sequences.",
+        p4H1: "Compare the length and each nucleotide position between normal DNA and patient DNA.",
+        p4Q2: "2. Compare the protein sequences before and after mutation. What is the consequence for the protein?",
+        p4H2: "Compare each amino acid and describe the changes in the protein structure.",
+        p4Q3: "3. Explain the pathological mechanism: Why does the protein change lead to the patient’s symptoms?",
+        p4H3: "Link protein structure → function → physiological/clinical consequence.",
+        p4Q4: "4. If the mutation occurred at a different position in the same gene, how might the outcome differ? Propose one hypothesis.",
+        p4H4: "Think about the importance of different positions within the coding sequence.",
+        p5Title: "Reflection",
+        p5Complete: "Completed",
+        p5SummaryTitle: "Process summary",
+        p5Case: "Case",
+        p5Hypothesis: "Initial hypothesis",
+        p5Mrna: "Entered mRNA",
+        p5Protein: "Entered protein",
+                p5ReflectTitle: "Reflection",
+        p5ReflectHint: "What did this model help you understand about gene mutation? What does the model not capture compared with real clinical practice?",
+        p5ReflectPlaceholder: "Write 3–5 sentences…",
+        p5ReflectSample: "The model helps me see how a small change in DNA can alter a protein and lead to disease. However, real DNA sequences are much longer, and many mutations do not cause disease. In clinical practice, multiple lines of evidence (clinical findings, enzymes, proteins, etc.) are needed rather than relying on a short DNA sequence alone.",
+        reset: "Start over",
+        resetConfirm: "Clear all progress and start over?",
+        home: "Back to case selection",
+        homeConfirm: "Returning to case selection will clear current answers. Continue?",
+        footer: "Natural Science 9 · Genetic Mutation Lab",
+        chars: "characters",
+        showSample: "View sample answer",
+        hideSample: "Hide sample answer",
+        sampleAnswer: "Sample answer (reference)",
+        lockNote: "Note: Finish writing your answer first, then tap «View sample answer». After you tap it, the text box is locked so you can compare with the sample.",
+        lockedHint: "Answer locked after viewing the sample.",
+        back: "Back",
+        next: "Next",
+        codonTable: "Genetic code table",
+        hideCodon: "Hide code table",
+        correctDnaNote: "Patient DNA sequence (after model mutation applied)",
+      }
+    };
+
+    // ========== DATA ==========
+    const CODON_TABLE = {
+      'UUU': 'Phe', 'UUC': 'Phe', 'UUA': 'Leu', 'UUG': 'Leu',
+      'UCU': 'Ser', 'UCC': 'Ser', 'UCA': 'Ser', 'UCG': 'Ser',
+      'UAU': 'Tyr', 'UAC': 'Tyr', 'UAA': 'STOP', 'UAG': 'STOP',
+      'UGU': 'Cys', 'UGC': 'Cys', 'UGA': 'STOP', 'UGG': 'Trp',
+      'CUU': 'Leu', 'CUC': 'Leu', 'CUA': 'Leu', 'CUG': 'Leu',
+      'CCU': 'Pro', 'CCC': 'Pro', 'CCA': 'Pro', 'CCG': 'Pro',
+      'CAU': 'His', 'CAC': 'His', 'CAA': 'Gln', 'CAG': 'Gln',
+      'CGU': 'Arg', 'CGC': 'Arg', 'CGA': 'Arg', 'CGG': 'Arg',
+      'AUU': 'Ile', 'AUC': 'Ile', 'AUA': 'Ile', 'AUG': 'Met (Start)',
+      'ACU': 'Thr', 'ACC': 'Thr', 'ACA': 'Thr', 'ACG': 'Thr',
+      'AAU': 'Asn', 'AAC': 'Asn', 'AAA': 'Lys', 'AAG': 'Lys',
+      'AGU': 'Ser', 'AGC': 'Ser', 'AGA': 'Arg', 'AGG': 'Arg',
+      'GUU': 'Val', 'GUC': 'Val', 'GUA': 'Val', 'GUG': 'Val',
+      'GCU': 'Ala', 'GCC': 'Ala', 'GCA': 'Ala', 'GCG': 'Ala',
+      'GAU': 'Asp', 'GAC': 'Asp', 'GAA': 'Glu', 'GAG': 'Glu',
+      'GGU': 'Gly', 'GGC': 'Gly', 'GGA': 'Gly', 'GGG': 'Gly',
+    };
+
+    const SCENARIOS = {
+      group1: {
+        disease: { vi: 'Hồng cầu hình liềm', en: 'Sickle Cell Anemia' },
+        gene: 'HBB (Beta-globin)',
+        dna: 'CACGTGGACTGAGGACTCCTCTTC',
+        description: {
+          vi: 'Bệnh nhân thường xuyên bị cơn đau dữ dội, thiếu máu mạn tính và hồng cầu biến dạng thành hình lưỡi liềm khi thiếu oxy. Bác sĩ chỉ định xét nghiệm DNA gene HBB.',
+          en: 'Patient suffers severe pain crises, chronic anemia and red blood cells that sickle under low oxygen. Doctor ordered DNA testing of the HBB gene.'
+        },
+        mutationType: 'substitution', targetPos: 17, targetVal: 'A',
+        note: { vi: 'Mô hình đơn giản hóa của đột biến Glu→Val cổ điển.', en: 'Simplified model of the classic Glu→Val mutation.' }
+      },
+      group2: {
+        disease: { vi: 'Bệnh xơ nang', en: 'Cystic Fibrosis' },
+        gene: 'CFTR',
+        dna: 'TAGTAGAAACCACAAAGGATA',
+        description: {
+          vi: 'Bệnh nhân trẻ tuổi thường xuyên bị nhiễm trùng phổi tái diễn, dịch nhầy đặc quánh và suy dinh dưỡng. Xét nghiệm DNA gene CFTR.',
+          en: 'Young patient suffers recurrent lung infections, thick sticky mucus and malnutrition. DNA testing of the CFTR gene.'
+        },
+        mutationType: 'deletion', targetPos: 4, targetVal: '3',
+        note: { vi: 'Mô hình mất 3 base (in-frame deletion) tương tự ΔF508.', en: 'Model of a 3-base in-frame deletion similar to ΔF508.' }
+      },
+      group3: {
+        disease: { vi: 'Bệnh Huntington', en: "Huntington's Disease" },
+        gene: 'HTT (Huntingtin)',
+        dna: 'TACCGCTGGGACCTTTTCGAC',
+        description: {
+          vi: 'Bệnh nhân trung niên xuất hiện động tác không kiểm soát, suy giảm trí nhớ và thay đổi tính cách. Xét nghiệm DNA gene HTT.',
+          en: 'Middle-aged patient develops uncontrolled movements, memory decline and personality changes. DNA testing of the HTT gene.'
+        },
+        mutationType: 'insertion', targetPos: 7, targetVal: 'GTC',
+        note: { vi: 'Mô hình thêm đoạn ngắn. Thực tế Huntington là mở rộng lặp CAG.', en: 'Model of a short insertion. Real Huntington is a CAG repeat expansion.' }
+      },
+      group4: {
+        disease: { vi: 'Phenylketonuria (PKU)', en: 'Phenylketonuria (PKU)' },
+        gene: 'PAH',
+        dna: 'AGGGCCACCGAGGACGAGGAC',
+        description: {
+          vi: 'Trẻ sơ sinh sàng lọc có nồng độ phenylalanine máu rất cao. Nếu không điều trị sớm sẽ chậm phát triển trí tuệ nặng. Xét nghiệm gene PAH.',
+          en: 'Newborn screening found very high blood phenylalanine. Without early treatment, severe intellectual disability. DNA testing of the PAH gene.'
+        },
+        mutationType: 'substitution', targetPos: 2, targetVal: 'A',
+        note: { vi: 'Mô hình thay thế điểm ảnh hưởng enzyme.', en: 'Model of a point substitution affecting the enzyme.' }
+      },
+      group5: {
+        disease: { vi: 'Bệnh Tay-Sachs', en: 'Tay-Sachs Disease' },
+        gene: 'HEXA',
+        dna: 'GCATATAGGATACGGGGACTG',
+        description: {
+          vi: 'Trẻ nhỏ dần mất kỹ năng vận động, điểm đỏ cherry-red trên võng mạc và suy giảm thần kinh tiến triển. Xét nghiệm gene HEXA.',
+          en: 'Young child progressively loses motor skills, develops cherry-red spot on retina and progressive neurological decline. DNA testing of the HEXA gene.'
+        },
+        mutationType: 'insertion', targetPos: 5, targetVal: 'ATAG',
+        note: { vi: 'Mô hình thêm đoạn gây dịch khung.', en: 'Model of an insertion that causes frameshift.' }
+      },
+      group6: {
+        disease: { vi: 'Mù màu đỏ-xanh', en: 'Red-Green Color Blindness' },
+        gene: 'OPN1LW/OPN1MW',
+        dna: 'TACCGGAGAGGCGTCGGCGAC',
+        description: {
+          vi: 'Bệnh nhân khó phân biệt màu đỏ và xanh lục từ nhỏ. Xét nghiệm gene opsin trên tế bào nón võng mạc.',
+          en: 'Patient has difficulty distinguishing red and green since childhood. DNA testing of opsin genes in retinal cone cells.'
+        },
+        mutationType: 'deletion', targetPos: 4, targetVal: '3',
+        note: { vi: 'Mô hình mất đoạn ngắn.', en: 'Model of a short deletion.' }
+      },
+      group7: {
+        disease: { vi: 'Hội chứng Lão nhi (Progeria)', en: 'Progeria' },
+        gene: 'LMNA',
+        dna: 'TACCGAGTCGAGTCCCTTAAA',
+        description: {
+          vi: 'Trẻ em biểu hiện lão hóa rất nhanh: da mỏng, rụng tóc sớm, cứng khớp và dấu hiệu xơ vữa động mạch. Xét nghiệm gene LMNA.',
+          en: 'Child shows extremely rapid aging: thin skin, early hair loss, joint stiffness and signs of atherosclerosis. DNA testing of the LMNA gene.'
+        },
+        mutationType: 'substitution', targetPos: 12, targetVal: 'A',
+        note: { vi: 'Mô hình thay thế điểm ảnh hưởng protein màng nhân.', en: 'Model of a point substitution affecting nuclear-envelope protein.' }
+      },
+      group8: {
+        disease: { vi: 'Alpha Thalassemia', en: 'Alpha Thalassemia' },
+        gene: 'HBA (Alpha-globin)',
+        dna: 'TACCACGACAGAGGACGGCTG',
+        description: {
+          vi: 'Bệnh nhân thiếu máu tán huyết nặng, mệt mỏi và da xanh xao. Xét nghiệm gene HBA.',
+          en: 'Patient suffers severe hemolytic anemia, fatigue and pale skin. DNA testing of the HBA gene.'
+        },
+        mutationType: 'deletion', targetPos: 5, targetVal: '1',
+        note: { vi: 'Mô hình mất 1 base gây dịch khung.', en: 'Model of a 1-base deletion causing frameshift.' }
+      }
+    };
+
+    const BASE_COLORS = {
+      'A': 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      'T': 'bg-rose-100 text-rose-800 border-rose-300',
+      'G': 'bg-sky-100 text-sky-800 border-sky-300',
+      'C': 'bg-amber-100 text-amber-800 border-amber-300',
+      'U': 'bg-purple-100 text-purple-800 border-purple-300'
+    };
+
+    // ========== HELPERS ==========
+    const transcribe = (templateDna) => {
+      const map = { 'A': 'U', 'T': 'A', 'G': 'C', 'C': 'G' };
+      return templateDna.toUpperCase().split('').map(b => map[b] || b).join('');
+    };
+    const translate = (mrna) => {
+      const codons = [];
+      for (let i = 0; i <= mrna.length - 3; i += 3) {
+        codons.push(mrna.substring(i, i + 3));
+      }
+      return codons.map(c => CODON_TABLE[c] || '???');
+    };
+    const getCorrectDna = (scenario) => {
+      const { dna, mutationType, targetPos, targetVal } = scenario;
+      const p = targetPos - 1;
+      if (mutationType === 'substitution') return dna.slice(0, p) + targetVal + dna.slice(p + 1);
+      if (mutationType === 'deletion') return dna.slice(0, p) + dna.slice(p + parseInt(targetVal));
+      if (mutationType === 'insertion') return dna.slice(0, p) + targetVal + dna.slice(p);
+      return dna;
+    };
+
+    // ========== SMALL UI ==========
+    const Btn = ({ children, onClick, disabled, variant = "primary", className = "", size = "md" }) => {
+      const base = "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none";
+      const sizes = { sm: "px-3 py-1.5 text-sm", md: "px-4 py-2.5 text-sm", lg: "px-5 py-3 text-base" };
+      const variants = {
+        primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm",
+        success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+        secondary: "bg-white border-2 border-slate-200 text-slate-700 hover:border-blue-400 hover:text-blue-700",
+        ghost: "bg-transparent text-slate-600 hover:bg-slate-100",
+        danger: "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+      };
+      return (
+        <button type="button" onClick={onClick} disabled={disabled} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}>
+          {children}
+        </button>
+      );
+    };
+
+    const WrittenAnswer = ({ label, hint, placeholder, value, onChange, sample, minChars = 15, rows = "min-h-[80px]", t, locked, onLock }) => {
+      const [showSample, setShowSample] = useState(false);
+      const canCheck = value.trim().length >= minChars;
+      const revealSample = () => {
+        if (!locked && onLock) onLock();
+        setShowSample(s => !s);
+      };
+      return (
+        <div className="space-y-2">
+          {label && <label className="font-semibold text-sm block">{label}</label>}
+          {hint && <p className="text-xs text-slate-500">{hint}</p>}
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">{t.lockNote}</p>
+          <textarea
+            className={`w-full border rounded-xl p-3 text-sm ${rows} focus:outline-none ${
+              locked ? "border-slate-300 bg-slate-100 text-slate-700 cursor-not-allowed" : "border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            }`}
+            placeholder={placeholder}
+            value={value}
+            readOnly={!!locked}
+            onChange={e => { if (!locked) onChange(e.target.value); }}
+          />
+          {locked && <p className="text-xs text-amber-700 font-medium">{t.lockedHint}</p>}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-slate-400">{value.trim().length} {t.chars}</p>
+            <Btn size="sm" variant="secondary" disabled={!canCheck && !locked} onClick={revealSample}>
+              <Icon name="check-circle" className="w-4 h-4" /> {showSample ? t.hideSample : t.showSample}
+            </Btn>
+          </div>
+          {showSample && sample && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-900">
+              <p className="font-semibold text-xs uppercase text-blue-600 mb-1">{t.sampleAnswer}</p>
+              <p className="whitespace-pre-line leading-relaxed">{sample}</p>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ========== MAIN APP ==========
+    function App() {
+      const [lang, setLang] = useState(() => {
+        try {
+          const raw = localStorage.getItem("gene_lab_v2");
+          if (raw) { const d = JSON.parse(raw); if (d.lang === "en" || d.lang === "vi") return d.lang; }
+        } catch (e) {}
+        return "vi";
+      });
+      const t = TRANSLATIONS[lang];
+
+      // Pre-interface: started = false → show welcome screen
+      const [started, setStarted] = useState(false);
+
+      const [phase, setPhase] = useState(1);
+      const [teamKey, setTeamKey] = useState("group1");
+      const [score, setScore] = useState(0);
+      const [showCodon, setShowCodon] = useState(false);
+      const [showKey, setShowKey] = useState(true);
+
+      // Hypothesis
+      const [prediction, setPrediction] = useState({ type: "", effect: "" });
+      const [hasPredicted, setHasPredicted] = useState(false);
+
+      // Practice
+      const [ansMrna, setAnsMrna] = useState("");
+      const [ansProtein, setAnsProtein] = useState("");
+      const [aaNote, setAaNote] = useState("");
+      const [isChecking, setIsChecking] = useState(false);
+      const [attempts, setAttempts] = useState(0);
+      const [showCorrect, setShowCorrect] = useState(false);
+
+      // Discussion
+      const [notes, setNotes] = useState({ q1: "", q2: "", q3: "", q4: "" });
+      const [lockedFields, setLockedFields] = useState({});
+      const lockField = (id) => setLockedFields(f => (f[id] ? f : { ...f, [id]: true }));
+
+      // Reflection
+      const [reflection, setReflection] = useState("");
+
+      const current = SCENARIOS[teamKey];
+      const correctDna = getCorrectDna(current);
+      const mrnaOriginal = transcribe(current.dna);
+      const proteinOriginal = translate(mrnaOriginal);
+      const correctMrna = transcribe(correctDna);
+      const correctProteinArr = translate(correctMrna);
+      const correctProteinStr = correctProteinArr.join(", ");
+
+      const discussionSamples = {
+        q1: `${current.mutationType === "substitution" ? "Đột biến thay thế" : current.mutationType === "deletion" ? "Đột biến mất đoạn" : "Đột biến thêm đoạn"}: so sánh hai trình tự cho thấy ${current.mutationType === "substitution" ? "chiều dài không đổi nhưng có nucleotide bị thay thế tại một vị trí" : current.mutationType === "deletion" ? "DNA bệnh nhân ngắn hơn do mất nucleotide" : "DNA bệnh nhân dài hơn do có nucleotide được thêm vào"}.`,
+        q2: `Protein bình thường gồm ${proteinOriginal.join(", ")}; protein sau đột biến theo trình tự đúng là ${correctProteinStr}. Hậu quả phụ thuộc vào loại đột biến và vị trí thay đổi; trong mô hình này cần đối chiếu sự thay đổi codon/amino acid để xác định hậu quả.`,
+        q3: `Thay đổi DNA làm thay đổi mRNA và có thể làm thay đổi trình tự amino acid. Khi cấu trúc protein thay đổi, chức năng của protein có thể bị ảnh hưởng, từ đó làm thay đổi hoạt động tế bào và góp phần tạo ra biểu hiện bệnh của ca mô phỏng.`,
+        q4: `Nếu đột biến xảy ra ở vị trí khác, hậu quả có thể khác vì mỗi vị trí có vai trò khác nhau trong trình tự mã hóa. Ví dụ, một thay đổi ở vị trí không làm đổi amino acid có thể ít ảnh hưởng hơn, trong khi thay đổi tại vùng chức năng quan trọng có thể làm protein mất chức năng.`
+      };
+
+      const isMrnaCorrect = ansMrna.toUpperCase().replace(/\s/g, "") === correctMrna;
+      const isProteinCorrect = ansProtein.toUpperCase().replace(/\s/g, "").replace(/,/g, "") ===
+        correctProteinStr.toUpperCase().replace(/\s/g, "").replace(/,/g, "");
+
+      // Persist
+      useEffect(() => {
+        if (!started) return;
+        const payload = { lang, phase, teamKey, score, prediction, hasPredicted, ansMrna, ansProtein, aaNote, notes, reflection, lockedFields, attempts, started };
+        localStorage.setItem("gene_lab_v2", JSON.stringify(payload));
+      }, [lang, phase, teamKey, score, prediction, hasPredicted, ansMrna, ansProtein, aaNote, notes, reflection, lockedFields, attempts, started]);
+
+      useEffect(() => {
+        try {
+          const raw = localStorage.getItem("gene_lab_v2");
+          if (raw) {
+            const d = JSON.parse(raw);
+            if (d.started) setStarted(true);
+            if (d.phase) setPhase(d.phase);
+            if (d.teamKey) setTeamKey(d.teamKey);
+            if (d.score != null) setScore(d.score);
+            if (d.prediction) setPrediction(d.prediction);
+            if (d.hasPredicted) setHasPredicted(d.hasPredicted);
+            if (d.ansMrna) setAnsMrna(d.ansMrna);
+            if (d.ansProtein) setAnsProtein(d.ansProtein);
+            if (d.aaNote) setAaNote(d.aaNote);
+            if (d.notes) setNotes(d.notes);
+            if (d.reflection) setReflection(d.reflection);
+            if (d.lockedFields) setLockedFields(d.lockedFields);
+            if (d.attempts) setAttempts(d.attempts);
+          }
+        } catch (e) {}
+      }, []);
+
+      useEffect(() => {
+        document.title = t.appTitle;
+        document.documentElement.lang = lang;
+      }, [lang, t]);
+
+      const progressPct = useMemo(() => {
+        const weights = { 1: 10, 2: 20, 3: 30, 4: 25, 5: 15 };
+        let p = 0;
+        if (phase > 1) p += weights[1];
+        if (phase > 2) p += weights[2];
+        else if (phase === 2 && hasPredicted) p += weights[2] * 0.8;
+        if (phase > 3) p += weights[3];
+        else if (phase === 3 && (isMrnaCorrect || isProteinCorrect)) p += weights[3] * 0.5;
+        if (phase > 4) p += weights[4];
+        else if (phase === 4 && notes.q1.length > 20) p += weights[4] * 0.4;
+        if (phase >= 5) p = 100;
+        return Math.min(100, Math.round(p));
+      }, [phase, hasPredicted, isMrnaCorrect, isProteinCorrect, notes]);
+
+      const phases = [
+        { id: 1, label: t.phase1 },
+        { id: 2, label: t.phase2 },
+        { id: 3, label: t.phase3 },
+        { id: 4, label: t.phase4 },
+        { id: 5, label: t.phase5 }
+      ];
+
+      const renderDnaStrip = (seq, compareSeq, isMutant = false) => {
+        const maxLen = Math.max(seq.length, compareSeq.length);
+        const cells = [];
+        for (let i = 0; i < maxLen; i++) {
+          const b = seq[i] || "";
+          const other = compareSeq[i] || "";
+          const isDiff = b !== other;
+          cells.push(
+            <div key={i} className="flex flex-col items-center">
+              <span className="text-[8px] text-slate-400 font-bold mb-0.5">{i + 1}</span>
+              <div className={`w-7 h-9 flex items-center justify-center border-2 rounded-lg text-xs font-bold shadow-sm
+                ${b ? (BASE_COLORS[b] || "bg-slate-100") : "bg-slate-200 border-dashed"}
+                ${isDiff && isMutant ? "ring-2 ring-rose-500 ring-offset-1" : ""}
+                ${isDiff && !isMutant ? "ring-2 ring-amber-400 ring-offset-1" : ""}
+              `}>{b || "–"}</div>
+            </div>
+          );
+        }
+        return cells;
+      };
+
+      const renderLiveMrna = (input, correct) => {
+        const maxLen = Math.max(input.length, correct.length);
+        const cells = [];
+        for (let i = 0; i < maxLen; i++) {
+          const b = input[i] || "";
+          const ok = b && b === correct[i];
+          cells.push(
+            <div key={i} className="flex flex-col items-center">
+              <span className="text-[8px] text-slate-400 font-bold mb-0.5">{i + 1}</span>
+              <div className={`w-7 h-9 flex items-center justify-center border-2 rounded-lg text-xs font-bold
+                ${b ? (ok ? "base-match border-emerald-400" : "base-mismatch border-rose-400") : "bg-slate-100 border-slate-200"}
+              `}>{b || "·"}</div>
+            </div>
+          );
+        }
+        return cells;
+      };
+
+      const goHome = () => {
+        if (window.confirm(t.homeConfirm)) {
+          setPhase(1);
+          setHasPredicted(false);
+          setPrediction({ type: "", effect: "" });
+          setAnsMrna(""); setAnsProtein(""); setAaNote("");
+          setIsChecking(false); setAttempts(0); setShowCorrect(false);
+          setNotes({ q1: "", q2: "", q3: "", q4: "" });
+          setReflection("");
+          setLockedFields({});
+        }
+      };
+
+      const fullReset = () => {
+        if (window.confirm(t.resetConfirm)) {
+          localStorage.removeItem("gene_lab_v2");
+          setStarted(false);
+          setPhase(1);
+          setTeamKey("group1");
+          setScore(0);
+          setHasPredicted(false);
+          setPrediction({ type: "", effect: "" });
+          setAnsMrna(""); setAnsProtein(""); setAaNote("");
+          setIsChecking(false); setAttempts(0); setShowCorrect(false);
+          setNotes({ q1: "", q2: "", q3: "", q4: "" });
+          setReflection("");
+          setLockedFields({});
+        }
+      };
+
+      const handleCheck = () => {
+        // The same button now works as a true Show/Hide toggle.
+        if (isChecking) {
+          setIsChecking(false);
+          setShowCorrect(false);
+          return;
+        }
+        setIsChecking(true);
+        setAttempts(a => a + 1);
+        if (isMrnaCorrect && isProteinCorrect) {
+          setScore(s => s + 25);
+          setShowCorrect(false);
+        } else if (attempts >= 2) {
+          setShowCorrect(true);
+        }
+      };
+
+      // ========== PRE-INTERFACE (Welcome) ==========
+      if (!started) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
+            <div className="absolute top-4 right-4 flex rounded-lg border-2 border-slate-200 overflow-hidden shadow-sm bg-white">
+              <button type="button" onClick={() => setLang("vi")} className={`px-3 py-1.5 text-xs font-bold transition ${lang === "vi" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>VN</button>
+              <button type="button" onClick={() => setLang("en")} className={`px-3 py-1.5 text-xs font-bold transition ${lang === "en" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>EN</button>
+            </div>
+
+            <div className="max-w-lg w-full bg-white rounded-3xl shadow-2xl border border-slate-200 p-8 sm:p-10 text-center fade-in">
+              <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg mb-6">
+                <Icon name="dna" className="w-8 h-8" />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-2">{t.brand}</p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3 leading-tight">{t.welcomeTitle}</h1>
+              <p className="text-slate-500 text-sm sm:text-base mb-6 leading-relaxed">{t.welcomeSubtitle}</p>
+              <p className="text-slate-600 text-sm mb-6 leading-relaxed">{t.welcomeDesc}</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mb-6">
+                {[t.welcomeFeature1, t.welcomeFeature2, t.welcomeFeature3, t.welcomeFeature4].map((f, i) => (
+                  <div key={i} className="flex items-start gap-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <Icon name="check-circle" className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="text-xs text-slate-700 font-medium">{f}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 mb-8 text-left">
+                <strong>⚠️</strong> {t.welcomeNote}
+              </div>
+
+              <Btn onClick={() => setStarted(true)} variant="primary" size="lg" className="w-full">
+                {t.startApp} <Icon name="arrow-right" className="w-5 h-5" />
+              </Btn>
+            </div>
+          </div>
+        );
+      }
+
+      // ========== MAIN LAB ==========
+      return (
+        <div className="max-w-4xl mx-auto px-3 py-4 sm:px-5 sm:py-6">
+          {/* Header */}
+          <header className="mb-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">{t.brand}</p>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 leading-tight">{t.appTitle}</h1>
+              </div>
+              <div className="flex items-center gap-3">
+                <Btn size="sm" variant="ghost" onClick={goHome} className="border border-slate-200">
+                  <Icon name="home" className="w-4 h-4" /> {t.home}
+                </Btn>
+                <div className="flex rounded-lg border-2 border-slate-200 overflow-hidden shadow-sm">
+                  <button type="button" onClick={() => setLang("vi")} className={`px-2.5 py-1.5 text-xs font-bold transition ${lang === "vi" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>VN</button>
+                  <button type="button" onClick={() => setLang("en")} className={`px-2.5 py-1.5 text-xs font-bold transition ${lang === "en" ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>EN</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden mb-3">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 progress-bar rounded-full" style={{ width: `${progressPct}%` }} />
+            </div>
+
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {phases.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { if (p.id <= phase || p.id === 1) setPhase(p.id); }}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    phase === p.id ? "bg-blue-600 text-white shadow" :
+                    phase > p.id ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {p.id}. {p.label}
+                </button>
+              ))}
+            </div>
+          </header>
+
+          <main className="fade-in" key={`${phase}-${lang}-${teamKey}`}>
+            {/* ===== PHASE 1: SELECT CASE ===== */}
+            {phase === 1 && (
+              <section className="space-y-5">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                  <h2 className="font-bold text-lg mb-2 flex items-center gap-2">
+                    <Icon name="stethoscope" className="w-5 h-5 text-blue-600" /> {t.p1Title}
+                  </h2>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-3">{t.p1Intro}</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900">
+                    <strong>{t.p1Disclaimer}</strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Object.keys(SCENARIOS).map(key => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setTeamKey(key)}
+                      className={`p-3 rounded-xl border-2 text-left transition flex flex-col gap-2 ${
+                        teamKey === key ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-slate-200 hover:border-blue-300 bg-white"
+                      }`}
+                    >
+                      <div className={`p-2 rounded-lg w-fit ${teamKey === key ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                        <Icon name="dna" className="w-5 h-5" />
+                      </div>
+                      <span className={`text-xs font-bold leading-tight ${teamKey === key ? "text-blue-800" : "text-slate-700"}`}>
+                        {SCENARIOS[key].disease[lang]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {teamKey && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+                    <h3 className="font-bold text-base">{current.disease[lang]}</h3>
+                    <p className="text-sm text-slate-600"><span className="font-semibold">Gene:</span> {current.gene}</p>
+                    <p className="text-sm text-slate-600 leading-relaxed">{current.description[lang]}</p>
+                    <p className="text-xs text-slate-500 italic">{current.note[lang]}</p>
+                    <div className="flex justify-end pt-2">
+                      <Btn onClick={() => { setPhase(2); setHasPredicted(false); setPrediction({ type: "", effect: "" }); }} variant="primary" size="lg">
+                        {t.p1Start} <Icon name="arrow-right" className="w-4 h-4" />
+                      </Btn>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* ===== PHASE 2: OBSERVE + HYPOTHESIS ===== */}
+            {phase === 2 && (
+              <section className="space-y-5">
+                <h2 className="font-bold text-lg flex items-center gap-2">
+                  <Icon name="eye" className="w-5 h-5 text-blue-600" /> {t.p2Title}
+                </h2>
+                <p className="text-sm text-slate-600">{t.p2Observe}</p>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider text-xs mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500"></div> {t.p2Normal}
+                    </div>
+                    <div className="overflow-x-auto custom-scrollbar">
+                      <div className="flex gap-1 min-w-max pb-1">{renderDnaStrip(current.dna, correctDna, false)}</div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <div className="bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider text-xs mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div> {t.p2Mutant}
+                    </div>
+                    <div className="overflow-x-auto custom-scrollbar">
+                      <div className="flex gap-1 min-w-max pb-1">{renderDnaStrip(correctDna, current.dna, true)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border-2 border-blue-200 p-5 space-y-4">
+                  <h3 className="font-bold text-base flex items-center gap-2">
+                    <Icon name="brain" className="w-5 h-5 text-blue-600" /> {t.p2HypTitle}
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold block">{t.p2HypQ1}</label>
+                      <textarea
+                        value={prediction.type}
+                        onChange={e => setPrediction(p => ({ ...p, type: e.target.value }))}
+                        placeholder={t.p2HypPlaceholder1}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm min-h-[100px] focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold block">{t.p2HypQ2}</label>
+                      <textarea
+                        value={prediction.effect}
+                        onChange={e => setPrediction(p => ({ ...p, effect: e.target.value }))}
+                        placeholder={t.p2HypPlaceholder2}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm min-h-[100px] focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between pt-2">
+                    <Btn onClick={() => setPhase(1)} variant="ghost">{t.back}</Btn>
+                    <Btn
+                      onClick={() => {
+                        if (prediction.type.trim() && prediction.effect.trim()) {
+                          setHasPredicted(true);
+                          setPhase(3);
+                          setScore(s => s + 10);
+                        } else {
+                          alert(t.p2NeedBoth);
+                        }
+                      }}
+                      variant="success"
+                    >
+                      {t.p2Confirm} <Icon name="arrow-right" className="w-4 h-4" />
+                    </Btn>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ===== PHASE 3: TRANSCRIBE + TRANSLATE ===== */}
+            {phase === 3 && (
+              <section className="space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="font-bold text-lg flex items-center gap-2">
+                    <Icon name="flask-conical" className="w-5 h-5 text-blue-600" /> {t.p3Title}
+                  </h2>
+                  <div className="flex gap-2">
+                    <Btn size="sm" variant="secondary" onClick={() => setShowKey(k => !k)}>
+                      <Icon name="book-open" className="w-4 h-4" /> {showKey ? t.p3HideKey : t.p3KeyTitle}
+                    </Btn>
+                    <Btn size="sm" variant="secondary" onClick={() => setShowCodon(c => !c)}>
+                      <Icon name="table" className="w-4 h-4" /> {showCodon ? t.hideCodon : t.codonTable}
+                    </Btn>
+                  </div>
+                </div>
+
+                {showKey && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-sm text-indigo-900 space-y-1.5">
+                    <p className="font-semibold mb-1">{t.p3KeyTitle}</p>
+                    <p>1. {t.p3Key1}</p>
+                    <p>2. {t.p3Key2}</p>
+                    <p>3. {t.p3Key3}</p>
+                    <p>4. {t.p3Key4}</p>
+                  </div>
+                )}
+
+                {showCodon && (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-0.5 font-mono p-2 bg-slate-900 text-white rounded-2xl">
+                    {Object.entries(CODON_TABLE).map(([c, a]) => (
+                      <div key={c} className="px-1 py-1 border border-white/10 rounded-md bg-slate-800/50 flex flex-col items-center justify-center leading-tight">
+                        <div className="text-blue-300 font-bold text-[11px] sm:text-xs">{c}</div>
+                        <div className="text-white/80 text-[10px] sm:text-[11px] truncate w-full text-center">{a}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-xl font-bold uppercase tracking-wider text-xs flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div> {t.p2Normal}
+                  </div>
+                  <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-2 rounded-xl font-bold uppercase tracking-wider text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></div> {t.p2Mutant}
+                    </div>
+                    <span className="text-[10px] font-medium normal-case">{t.p3Attempts}: {attempts}</span>
+                  </div>
+                </div>
+
+                {/* mRNA */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-slate-900 rounded-2xl p-4 text-white">
+                    <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Icon name="refresh-cw" className="w-4 h-4 text-blue-400" /> {t.p3NormalMrna}</h3>
+                    <div className="overflow-x-auto custom-scrollbar">
+                      <div className="flex gap-1 min-w-max pb-1">
+                        {mrnaOriginal.split("").map((b, i) => (
+                          <div key={i} className="flex flex-col items-center">
+                            <span className="text-[8px] text-slate-500 font-bold mb-0.5">{i + 1}</span>
+                            <div className={`w-7 h-9 flex items-center justify-center border-2 rounded-lg text-xs font-bold ${BASE_COLORS[b] || "bg-slate-800"} border-blue-500/30`}>{b}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`rounded-2xl p-4 border transition-all ${isChecking ? (isMrnaCorrect ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200") : "bg-white border-slate-200"}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-slate-800">{t.p3MutantMrna}</h3>
+                      {isChecking && (isMrnaCorrect ? <Icon name="check-circle" className="w-5 h-5 text-emerald-500" /> : <Icon name="alert-circle" className="w-5 h-5 text-rose-500" />)}
+                    </div>
+                    <textarea
+                      value={ansMrna}
+                      onChange={e => setAnsMrna(e.target.value.toUpperCase().replace(/[^AUGC]/g, ""))}
+                      placeholder={t.p3PlaceholderMrna}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm min-h-[60px] focus:outline-none focus:border-blue-400"
+                    />
+                    {ansMrna && (
+                      <div className="mt-2 overflow-x-auto custom-scrollbar">
+                        <div className="flex gap-1 min-w-max pb-1">{renderLiveMrna(ansMrna, correctMrna)}</div>
+                      </div>
+                    )}
+                    {isChecking && (
+                      <div className={`mt-2 p-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${isMrnaCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                        {isMrnaCorrect ? t.p3Correct : t.p3Incorrect}
+                      </div>
+                    )}
+                    {showCorrect && !isMrnaCorrect && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs font-mono text-blue-900">
+                        {t.p3ShowCorrect}: {correctMrna}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Protein */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-slate-800 rounded-2xl p-4 text-white">
+                    <h3 className="text-sm font-bold mb-3">{t.p3NormalProt}</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {proteinOriginal.map((aa, i) => (
+                        <div key={i} className="flex flex-col items-center">
+                          <div className="px-2.5 py-1.5 bg-slate-900 rounded-lg text-xs font-bold border border-white/10 text-emerald-400">{aa}</div>
+                          <span className="text-[8px] text-slate-500 mt-0.5">{mrnaOriginal.substring(i * 3, i * 3 + 3)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={`rounded-2xl p-4 border transition-all ${isChecking ? (isProteinCorrect ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200") : "bg-white border-slate-200"}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-slate-800">{t.p3MutantProt}</h3>
+                      {isChecking && (isProteinCorrect ? <Icon name="check-circle" className="w-5 h-5 text-emerald-500" /> : <Icon name="alert-circle" className="w-5 h-5 text-rose-500" />)}
+                    </div>
+                    <textarea
+                      value={ansProtein}
+                      onChange={e => setAnsProtein(e.target.value)}
+                      placeholder={t.p3PlaceholderProt}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm min-h-[60px] focus:outline-none focus:border-blue-400"
+                    />
+                    {isChecking && (
+                      <div className={`mt-2 p-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${isProteinCorrect ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                        {isProteinCorrect ? t.p3Correct : t.p3Incorrect}
+                      </div>
+                    )}
+                    {showCorrect && !isProteinCorrect && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-xs font-mono text-blue-900">
+                        {t.p3ShowCorrect}: {correctProteinStr}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {(isChecking || ansProtein.length > 5) && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+                    <h3 className="font-bold text-emerald-800 flex items-center gap-2"><Icon name="beaker" className="w-4 h-4" /> {t.p3AaTitle}</h3>
+                    <p className="text-sm text-emerald-700">{t.p3AaHint}</p>
+                    <textarea
+                      value={aaNote}
+                      onChange={e => setAaNote(e.target.value)}
+                      placeholder={t.p3AaPlaceholder}
+                      className="w-full p-3 bg-white border border-emerald-200 rounded-xl text-sm min-h-[70px] focus:outline-none focus:border-emerald-400"
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-wrap justify-between gap-2 pt-2">
+                  <Btn onClick={() => setPhase(2)} variant="ghost">{t.back}</Btn>
+                  <div className="flex gap-2">
+                    <Btn onClick={handleCheck} variant="secondary">
+                      {isChecking ? t.p3Hide : t.p3Check}
+                    </Btn>
+                    <Btn onClick={() => setPhase(4)} variant="success" disabled={!hasPredicted}>
+                      {t.next} <Icon name="arrow-right" className="w-4 h-4" />
+                    </Btn>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ===== PHASE 4: DISCUSSION ===== */}
+            {phase === 4 && (
+              <section className="space-y-5">
+                <h2 className="font-bold text-lg flex items-center gap-2">
+                  <Icon name="message-square" className="w-5 h-5 text-blue-600" /> {t.p4Title}
+                </h2>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900">
+                  <Icon name="info" className="w-4 h-4 inline-block mr-1 align-text-bottom" />
+                  {t.lockNote}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {[
+                    { id: "q1", label: t.p4Q1, hint: t.p4H1 },
+                    { id: "q2", label: t.p4Q2, hint: t.p4H2 },
+                    { id: "q3", label: t.p4Q3, hint: t.p4H3 },
+                    { id: "q4", label: t.p4Q4, hint: t.p4H4 }
+                  ].map(q => (
+                    <div key={q.id} className="bg-white rounded-2xl border border-slate-200 p-4">
+                      <label className="font-semibold text-sm block mb-2">{q.label}</label>
+                      <p className="text-xs text-slate-500 mb-2">{q.hint}</p>
+                      <textarea
+                        value={notes[q.id]}
+                        onChange={e => setNotes(n => ({ ...n, [q.id]: e.target.value }))}
+                        placeholder={q.hint}
+                        readOnly={!!lockedFields[q.id]}
+                        className={`w-full border rounded-xl p-3 text-sm min-h-[110px] focus:outline-none ${
+                          lockedFields[q.id] ? "border-slate-300 bg-slate-100 text-slate-700 cursor-not-allowed" : "border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        }`}
+                      />
+                      <p className="text-xs text-slate-400 mt-1">{notes[q.id].trim().length} {t.chars}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {(() => {
+                  const allAnswered = ["q1","q2","q3","q4"].every(id => notes[id].trim().length >= 20);
+                  return (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-blue-900 font-medium">
+                          {allAnswered
+                            ? t.lockNote
+                            : (lang === "vi"
+                              ? "Hãy hoàn thành cả 4 câu hỏi (ít nhất 20 ký tự/câu) trước khi xem đáp án tham khảo."
+                              : "Complete all 4 questions (at least 20 characters each) before viewing the reference answers.")}
+                        </p>
+                        <Btn
+                          size="sm"
+                          variant="secondary"
+                          disabled={!allAnswered && !Object.keys(lockedFields).some(k => lockedFields[k])}
+                          onClick={() => {
+                            const currentlyShown = Object.keys(lockedFields).some(k => lockedFields[k]);
+                            if (currentlyShown) {
+                              setLockedFields({});
+                            } else if (allAnswered) {
+                              setLockedFields({ q1: true, q2: true, q3: true, q4: true });
+                            }
+                          }}
+                        >
+                          <Icon name="eye" className="w-4 h-4" />
+                          {Object.keys(lockedFields).some(k => lockedFields[k]) ? t.hideSample : t.showSample}
+                        </Btn>
+                      </div>
+
+                      {Object.keys(lockedFields).some(k => lockedFields[k]) && (
+                        <div className="bg-white border border-blue-200 rounded-xl p-4 space-y-3">
+                          <p className="font-semibold text-xs uppercase text-blue-600">{t.sampleAnswer}</p>
+                          {["q1","q2","q3","q4"].map(id => (
+                            <div key={id} className="text-sm text-blue-900">
+                              <p className="font-semibold mb-1">{t[`p4Q${id.slice(1)}`]}</p>
+                              <p className="whitespace-pre-line leading-relaxed">{discussionSamples[id]}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="flex justify-between pt-2">
+                  <Btn onClick={() => setPhase(3)} variant="ghost">{t.back}</Btn>
+                  <Btn
+                    onClick={() => { setPhase(5); setScore(s => s + 15); }}
+                    variant="success"
+                    disabled={!["q1","q2","q3","q4"].every(id => notes[id].trim().length >= 20)}
+                  >
+                    {t.next} <Icon name="arrow-right" className="w-4 h-4" />
+                  </Btn>
+                </div>
+              </section>
+            )}
+
+            {/* ===== PHASE 5: REFLECTION ===== */}
+            {phase === 5 && (
+              <section className="space-y-5">
+                <div className="text-center bg-slate-900 text-white rounded-2xl p-6">
+                  <p className="text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">{t.p5Complete}</p>
+                  <h2 className="text-xl font-extrabold mb-2">{t.p5Title}</h2>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+                  <h3 className="font-bold text-slate-800">{t.p5SummaryTitle}</h3>
+                  <p className="text-sm"><span className="font-semibold">{t.p5Case}:</span> {current.disease[lang]} · {current.gene}</p>
+                  <p className="text-sm"><span className="font-semibold">{t.p5Hypothesis}:</span> {prediction.type ? `${prediction.type}${prediction.effect ? " | " + prediction.effect : ""}` : "—"}</p>
+                  <p className="text-sm"><span className="font-semibold">{t.p5Mrna}:</span> {ansMrna || "—"}</p>
+                  <p className="text-sm"><span className="font-semibold">{t.p5Protein}:</span> {ansProtein || "—"}</p>
+                  <div className="pt-2 border-t border-slate-100 space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t.phase4}</p>
+                    {[
+                      { id: "q1", label: t.p4Q1 },
+                      { id: "q2", label: t.p4Q2 },
+                      { id: "q3", label: t.p4Q3 },
+                      { id: "q4", label: t.p4Q4 }
+                    ].map(q => (
+                      <div key={q.id} className="text-sm">
+                        <p className="font-semibold text-slate-700 mb-0.5">{q.label}</p>
+                        <p className="text-slate-600 whitespace-pre-line leading-relaxed bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                          {notes[q.id]?.trim() || "—"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-amber-50 to-emerald-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+                  <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                    <Icon name="lightbulb" className="w-5 h-5 text-amber-500" /> {t.p5ReflectTitle}
+                  </h3>
+                  <WrittenAnswer
+                    label=""
+                    hint={t.p5ReflectHint}
+                    placeholder={t.p5ReflectPlaceholder}
+                    value={reflection}
+                    onChange={setReflection}
+                    minChars={40}
+                    rows="min-h-[110px]"
+                    sample={t.p5ReflectSample}
+                    t={t}
+                    locked={!!lockedFields.reflection}
+                    onLock={() => lockField("reflection")}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 justify-between">
+                  <Btn onClick={() => setPhase(4)} variant="ghost">{t.back}</Btn>
+                  <div className="flex gap-2">
+                    <Btn onClick={fullReset} variant="danger" size="sm">{t.reset}</Btn>
+                  </div>
+                </div>
+              </section>
+            )}
+          </main>
+
+          <footer className="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+            {t.footer}
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
